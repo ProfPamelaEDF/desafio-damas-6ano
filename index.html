@@ -1,11 +1,22 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Desafio de Damas — Acesso</title><style>body{font:16px system-ui,Arial;background:#edf3fb;color:#172a46;margin:0}.wrap{max-width:540px;margin:50px auto;padding:18px}.hero{background:#143b7b;color:white;padding:24px;border-radius:18px}h1{margin:0 0 8px;font-size:27px}.card{background:white;padding:22px;border-radius:18px;margin-top:16px;box-shadow:0 4px 20px #172a4612}button{display:block;width:100%;padding:15px;margin:12px 0;border:0;border-radius:12px;background:#2354c4;color:white;font:600 16px system-ui;cursor:pointer}.alt{background:#e9effa;color:#173b7c}.muted{color:#52627a;font-size:14px;line-height:1.5}.status{padding:12px;background:#edf4ff;border-radius:9px;overflow-wrap:anywhere}.uid{font-family:monospace;overflow-wrap:anywhere}button:disabled{opacity:.5}</style></head><body><main class="wrap"><header class="hero"><h1>♟️ Desafio de Damas</h1><div>Educação Física • 6º Ano • E.E. Bairro do Engano</div></header><section class="card"><h2>Teste de acesso</h2><p class="muted">Esta página verifica a entrada de professora e alunos no Firebase. As partidas ainda não estão liberadas.</p><button id="teacher">👩‍🏫 Entrar como professora (Google)</button><button id="student" class="alt">🎒 Entrar como aluno (sem cadastro)</button><button id="logout" class="alt" hidden>Sair da conta</button><p id="status" class="status" role="status">Aguardando escolha…</p><div id="info" hidden><p><strong>Tipo de acesso:</strong> <span id="type"></span></p><p><strong>UID do Firebase:</strong></p><p class="uid" id="uid"></p><button id="copy" class="alt">Copiar UID</button></div><p class="muted">Não compartilhe senhas. O UID identifica a conta neste projeto e será usado para configurar as permissões. Não compartilhe o UID dos alunos.</p></section></main><script type="module">
-import {initializeApp} from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
-import {getAuth,GoogleAuthProvider,signInWithPopup,signInAnonymously,onAuthStateChanged,signOut} from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
-const firebaseConfig={apiKey:'AIzaSyA4RXpqnFymiG-4Uk2rSypPU_HkUb2X8Kw',authDomain:'desafio-de-damas-6ano.firebaseapp.com',databaseURL:'https://desafio-de-damas-6ano-default-rtdb.europe-west1.firebasedatabase.app',projectId:'desafio-de-damas-6ano',storageBucket:'desafio-de-damas-6ano.firebasestorage.app',messagingSenderId:'502924255902',appId:'1:502924255902:web:dfb48547db729e9a49118f'};
-const auth=getAuth(initializeApp(firebaseConfig));const el=id=>document.getElementById(id);const status=t=>el('status').textContent=t;
-onAuthStateChanged(auth,u=>{el('info').hidden=!u;el('logout').hidden=!u;el('teacher').hidden=!!u;el('student').hidden=!!u;if(u){el('type').textContent=u.isAnonymous?'Aluno (anônimo)':'Conta Google (ainda sem permissão de professora)';el('uid').textContent=u.uid;status('Login realizado com sucesso. O banco de dados permanece bloqueado.')}else status('Escolha uma opção de entrada.');});
-el('teacher').onclick=async()=>{try{status('Abrindo o login Google…');await signInWithPopup(auth,new GoogleAuthProvider())}catch(e){status('Falha no login Google: '+e.message+'; tente permitir pop-ups no navegador.')}};
-el('student').onclick=async()=>{try{status('Entrando…');await signInAnonymously(auth)}catch(e){status('Falha na entrada: '+e.message)}};
-el('logout').onclick=async()=>{await signOut(auth)};
-el('copy').onclick=async()=>{try{await navigator.clipboard.writeText(el('uid').textContent);status('UID copiado.')}catch{status('Selecione e copie o UID exibido.')}};
-</script></body></html>
+{
+  "rules": {
+    "admins": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": false
+      }
+    },
+    "rooms": {
+      "$room": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!data.exists() && newData.child('host').val() === auth.uid && (newData.child('mode').val() === 'duo' || (newData.child('mode').val() === 'class' && root.child('admins').child(auth.uid).val() === true))) || (data.exists() && data.child('host').val() === auth.uid && (data.child('mode').val() !== 'class' || root.child('admins').child(auth.uid).val() === true)) || (data.exists() && data.child('mode').val() === 'duo' && data.child('guest').val() === auth.uid) || (data.exists() && data.child('mode').val() === 'duo' && !data.child('guest').exists() && newData.child('guest').val() === auth.uid && newData.child('host').val() === data.child('host').val()))",
+        "votes": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('rooms').child($room).child('mode').val() === 'class' && root.child('rooms').child($room).child('turn').val() === 'b'",
+            ".validate": "newData.isString() && newData.val().length <= 7"
+          }
+        }
+      }
+    }
+  }
+}
